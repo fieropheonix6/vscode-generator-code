@@ -1,16 +1,26 @@
 /*---------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
+import Generator from 'yeoman-generator';
+import * as prompts from './prompts.js';
 
-const prompts = require("./prompts");
 
-module.exports = {
+/**
+ * @typedef {{
+*   checkJavaScript: boolean
+* } & import('./index.js').ExtensionConfig} ExtensionConfig
+*/
+
+/**
+ * @type {import('./index.js').ExtensionGenerator}
+ */
+export default {
     id: 'ext-command-js',
     aliases: ['js', 'command-js'],
     name: 'New Extension (JavaScript)',
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     prompting: async (generator, extensionConfig) => {
         await prompts.askForExtensionDisplayName(generator, extensionConfig);
@@ -32,8 +42,8 @@ module.exports = {
     },
 
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     writing: (generator, extensionConfig) => {
         generator.fs.copy(generator.templatePath('vscode'), generator.destinationPath('.vscode'));
@@ -52,10 +62,13 @@ module.exports = {
 
         generator.fs.copyTpl(generator.templatePath('extension.js'), generator.destinationPath('extension.js'), extensionConfig);
         generator.fs.copyTpl(generator.templatePath('package.json'), generator.destinationPath('package.json'), extensionConfig);
-        generator.fs.copyTpl(generator.templatePath('.eslintrc.json'), generator.destinationPath('.eslintrc.json'), extensionConfig);
+        generator.fs.copy(generator.templatePath('.vscode-test.mjs'), generator.destinationPath('.vscode-test.mjs'));
+        generator.fs.copyTpl(generator.templatePath('eslint.config.mjs'), generator.destinationPath('eslint.config.mjs'), extensionConfig);
 
         if (extensionConfig.pkgManager === 'yarn') {
             generator.fs.copyTpl(generator.templatePath('.yarnrc'), generator.destinationPath('.yarnrc'), extensionConfig);
+        } else if (extensionConfig.pkgManager === 'pnpm') {
+            generator.fs.copyTpl(generator.templatePath('.npmrc-pnpm'), generator.destinationPath('.npmrc'), extensionConfig);
         }
 
         extensionConfig.installDependencies = true;

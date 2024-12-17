@@ -3,30 +3,69 @@
  *--------------------------------------------------------*/
 'use strict';
 
-const Generator = require('yeoman-generator');
-const yosay = require('yosay');
+import Generator from 'yeoman-generator';
+import yosay from 'yosay';
+import { fileURLToPath } from 'url';
+import * as path from 'path';
+import * as env from './env.js';
+import which from 'which';
+import colortheme from './generate-colortheme.js';
+import commandjs from './generate-command-js.js';
+import commandts from './generate-command-ts.js';
+import commandweb from './generate-command-web.js';
+import extensionpack from './generate-extensionpack.js';
+import keymap from './generate-keymap.js';
+import language from './generate-language.js';
+import localization from './generate-localization.js';
+import notebook from './generate-notebook-renderer.js';
+import snippets from './generate-snippets.js';
 
-const path = require('path');
-const env = require('./env');
-const which = require('which');
 
-const colortheme = require('./generate-colortheme');
-const commandjs = require('./generate-command-js');
-const commandts = require('./generate-command-ts');
-const commandweb = require('./generate-command-web');
-const extensionpack = require('./generate-extensionpack');
-const keymap = require('./generate-keymap');
-const language = require('./generate-language');
-const localization = require('./generate-localization');
-const notebook = require('./generate-notebook-renderer');
-const snippets = require('./generate-snippets');
 
+/**
+ * @typedef {{
+ * insiders: boolean,
+ * installDependencies: boolean,
+ * dependencyVersions: Object.<string, string>,
+ * dep: (name: string) => string,
+ * vsCodeEngine: string,
+ * type: string,
+ * name: string,
+ * description: string,
+ * displayName: string,
+ * pkgManager: 'npm' | 'yarn' | 'pnpm',
+ * gitInit: boolean,
+ * bundler: 'webpack' | 'esbuild' | 'unbundled',
+ * proposedAPI: boolean,
+ * }} ExtensionConfig
+ *
+ * @typedef {{
+ * id: string,
+ * insidersName?: string,
+ * aliases: string[],
+ * name: string,
+ * update?: boolean,
+ * prompting: (generator: Generator, extensionConfig: ExtensionConfig) => Promise<void>,
+ * writing: (generator: Generator, extensionConfig: ExtensionConfig) => void,
+ * endMessage?: (generator: Generator, extensionConfig: ExtensionConfig) => void,
+ * }} ExtensionGenerator
+ */
+
+
+/**
+ * @type {ExtensionGenerator[]}
+ */
 const extensionGenerators = [
     commandts, commandjs, colortheme, language, snippets, keymap, extensionpack, localization,
     commandweb, notebook
 ]
 
-module.exports = class extends Generator {
+export default class extends Generator {
+
+    /**
+     * @type {ExtensionConfig}
+     */
+    extensionConfig;
 
     constructor(args, opts) {
         super(args, opts);
@@ -45,7 +84,7 @@ module.exports = class extends Generator {
         this.option('extensionDescription', { type: String, description: 'Description of the extension' });
 
         this.option('pkgManager', { type: String, description: `'npm', 'yarn' or 'pnpm'` });
-        this.option('webpack', { type: Boolean, description: `Bundle the extension with webpack` });
+        this.option('bundler', { type: String, description: `Bundle the extension: 'webpack', 'esbuild'` });
         this.option('gitInit', { type: Boolean, description: `Initialize a git repo` });
 
         this.option('snippetFolder', { type: String, description: `Snippet folder location` });
@@ -126,6 +165,7 @@ module.exports = class extends Generator {
         try {
             await this.extensionGenerator.prompting(this, this.extensionConfig);
         } catch (e) {
+            console.log(e);
             this.abort = true;
         }
 
@@ -143,7 +183,8 @@ module.exports = class extends Generator {
         this.log();
         this.log(`Writing in ${this.destinationPath()}...`);
 
-        this.sourceRoot(path.join(__dirname, './templates/' + this.extensionConfig.type));
+        const currentFilename = fileURLToPath(import.meta.url);
+        this.sourceRoot(path.join(currentFilename, '../templates/' + this.extensionConfig.type));
 
         return this.extensionGenerator.writing(this, this.extensionConfig);
     }
@@ -151,12 +192,15 @@ module.exports = class extends Generator {
     // Installation
     install() {
         if (this.abort) {
+            // @ts-ignore
             this.env.options.skipInstall = true;
             return;
         }
         if (this.extensionConfig.installDependencies) {
+            // @ts-ignore
             this.env.options.nodePackageManager = this.extensionConfig.pkgManager;
         } else {
+            // @ts-ignore
             this.env.options.skipInstall = true;
         }
     }
@@ -185,11 +229,11 @@ module.exports = class extends Generator {
 
         // Git init
         if (this.extensionConfig.gitInit) {
-            this.spawnCommand('git', ['init', '--quiet', '--initial-branch=main']);
+            await this.spawn('git', ['init', '--quiet']);
         }
 
         if (this.extensionConfig.proposedAPI) {
-            this.spawnCommand(this.extensionConfig.pkgManager, ['run', 'update-proposed-api']);
+            await this.spawn(this.extensionConfig.pkgManager, ['run', 'update-proposed-api']);
         }
         this.log('');
 
@@ -224,20 +268,20 @@ module.exports = class extends Generator {
         if (this.options["open"]) {
             if (codeStableLocation) {
                 this.log(`Opening ${this.destinationPath()} in Visual Studio Code...`);
-                this.spawnCommand(codeStableLocation, [this.destinationPath()]);
+                await this.spawn(codeStableLocation, [this.destinationPath()]);
             } else {
                 this.log(`'code' command not found.`);
             }
         } else if (this.options["openInInsiders"]) {
             if (codeInsidersLocation) {
                 this.log(`Opening ${this.destinationPath()} with Visual Studio Code Insiders...`);
-                this.spawnCommand(codeInsidersLocation, [this.destinationPath()]);
+                await this.spawn(codeInsidersLocation, [this.destinationPath()]);
             } else {
                 this.log(`'code-insiders' command not found.`);
             }
         } else if (codeInsidersLocation || codeStableLocation) {
             if (this.options["quick"]) {
-                this.spawnCommand(codeInsidersLocation || codeStableLocation, [this.destinationPath()]);
+                await this.spawn(codeInsidersLocation || codeStableLocation, [this.destinationPath()]);
             } else {
                 const choices = [];
                 if (codeInsidersLocation) {
@@ -255,7 +299,7 @@ module.exports = class extends Generator {
                     choices
                 });
                 if (answer && answer.openWith && answer.openWith !== 'skip') {
-                    this.spawnCommand(answer.openWith, [this.destinationPath()]);
+                    await this.spawn(answer.openWith, [this.destinationPath()]);
                 }
             }
         }

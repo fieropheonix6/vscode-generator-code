@@ -1,16 +1,23 @@
 /*---------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
+import Generator from 'yeoman-generator';
+import * as prompts from './prompts.js';
 
-const prompts = require("./prompts");
+/**
+ * @typedef { import('./index.js').ExtensionConfig} ExtensionConfig
+*/
 
-module.exports = {
+/**
+ * @type {import('./index.js').ExtensionGenerator}
+ */
+export default {
     id: 'ext-keymap',
     aliases: ['keymap'],
     name: 'New Keymap',
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     prompting: async (generator, extensionConfig) => {
         await prompts.askForExtensionDisplayName(generator, extensionConfig);
@@ -20,8 +27,8 @@ module.exports = {
         await prompts.askForGit(generator, extensionConfig);
     },
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     writing: (generator, extensionConfig) => {
         generator.fs.copy(generator.templatePath('vscode'), generator.destinationPath('.vscode'));

@@ -1,22 +1,35 @@
 /*---------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
+import Generator from 'yeoman-generator';
+import * as prompts from './prompts.js';
+import * as validator from './validator.js';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as plistParser from 'fast-plist';
+import request from 'request-light';
 
-const prompts = require("./prompts");
-const validator = require('./validator');
-const sanitize = require("sanitize-filename");
-const path = require('path');
-const fs = require('fs');
-const plistParser = require('fast-plist');
-const request = require('request-light');
+/**
+ * @typedef {{
+*   themeContent: Object,
+*   themeName: string,
+*   themeBase: string,
+*   themeFileName: string,
+*   tmThemeFileName: string,
+*   tmThemeContent: string,
+* } & import('./index.js').ExtensionConfig} ExtensionConfig
+*/
 
-module.exports = {
+/**
+ * @type {import('./index.js').ExtensionGenerator}
+ */
+export default {
     id: 'ext-colortheme',
     aliases: ['colortheme'],
     name: 'New Color Theme',
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     prompting: async (generator, extensionConfig) => {
 
@@ -63,14 +76,14 @@ module.exports = {
         await prompts.askForGit(generator, extensionConfig);
     },
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     writing: (generator, extensionConfig) => {
         if (extensionConfig.tmThemeFileName) {
             generator.fs.copyTpl(generator.templatePath('themes/theme.tmTheme'), generator.destinationPath('themes', extensionConfig.tmThemeFileName), extensionConfig);
         }
-        extensionConfig.themeFileName = sanitize(extensionConfig.themeName + '-color-theme.json');
+        extensionConfig.themeFileName = validator.sanitizeFilename(extensionConfig.themeName + '-color-theme.json');
         if (extensionConfig.themeContent) {
             extensionConfig.themeContent.name = extensionConfig.themeName;
             generator.fs.copyTpl(generator.templatePath('themes/color-theme.json'), generator.destinationPath('themes', extensionConfig.themeFileName), extensionConfig);
@@ -92,8 +105,8 @@ module.exports = {
 }
 
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 async function askForThemeInfo(generator, extensionConfig) {
     if (generator.options['quick']) {
@@ -133,7 +146,12 @@ async function askForThemeInfo(generator, extensionConfig) {
         await convertTheme(null, extensionConfig, false, generator);
     }
 }
-
+/**
+ * @param {string} location
+ * @param {ExtensionConfig} extensionConfig
+ * @param {boolean} inline
+ * @param {Generator} generator
+ */
 function convertTheme(location, extensionConfig, inline, generator) {
     if (!location) {
         extensionConfig.tmThemeFileName = '';
@@ -188,6 +206,12 @@ function convertTheme(location, extensionConfig, inline, generator) {
     }
 }
 
+/**
+ * @param {ExtensionConfig} extensionConfig
+ * @param {string} tmThemeFileName
+ * @param {string} body
+ * @param {Generator} generator
+ */
 function processContent(extensionConfig, tmThemeFileName, body, generator) {
     const themeNameMatch = body.match(/<key>name<\/key>\s*<string>([^<]*)/);
     const themeName = themeNameMatch ? themeNameMatch[1] : '';
@@ -236,6 +260,11 @@ const mappings = {
     "ansiBrightCyan": ["terminal.ansiBrightCyan"], "ansiBrightWhite": ["terminal.ansiBrightWhite"]
 };
 
+/**
+ * @param {string} content
+ * @param {string} tmThemeFileName
+ * @param {Generator} generator
+ */
 function migrate(content, tmThemeFileName, generator) {
     let result = {};
     let theme;

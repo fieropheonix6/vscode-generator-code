@@ -1,21 +1,36 @@
 /*---------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
+import Generator from 'yeoman-generator';
+import * as prompts from './prompts.js';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as plistParser from 'fast-plist';
+import request from 'request-light';
+import * as validator from './validator.js';
 
-const prompts = require("./prompts");
-const sanitize = require("sanitize-filename");
-const path = require('path');
-const fs = require('fs');
-const plistParser = require('fast-plist');
-const request = require('request-light');
+/**
+ * @typedef {{
+*   languageId: string,
+*   languageName: string,
+*   languageExtensions: string[],
+*   languageScopeName: string,
+*   languageContent: string,
+*   languageFileName: string,
+*   isCustomization: boolean
+* } & import('./index.js').ExtensionConfig} ExtensionConfig
+*/
 
-module.exports = {
+/**
+ * @type {import('./index.js').ExtensionGenerator}
+ */
+export default {
     id: 'ext-language',
     aliases: ['language'],
     name: 'New Language Support',
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     prompting: async (generator, extensionConfig) => {
         await askForLanguageInfo(generator, extensionConfig);
@@ -33,16 +48,16 @@ module.exports = {
 
     },
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     writing: (generator, extensionConfig) => {
         if (!extensionConfig.languageContent) {
-            extensionConfig.languageFileName = sanitize(extensionConfig.languageId + '.tmLanguage.json');
+            extensionConfig.languageFileName = validator.sanitizeFilename(extensionConfig.languageId + '.tmLanguage.json');
 
             generator.fs.copyTpl(generator.templatePath('syntaxes/new.tmLanguage.json'), generator.destinationPath('syntaxes', extensionConfig.languageFileName), extensionConfig);
         } else {
-            generator.fs.copyTpl(generator.templatePath('syntaxes/language.tmLanguage'), generator.destinationPath('syntaxes', sanitize(extensionConfig.languageFileName)), extensionConfig);
+            generator.fs.copyTpl(generator.templatePath('syntaxes/language.tmLanguage'), generator.destinationPath('syntaxes', validator.sanitizeFilename(extensionConfig.languageFileName)), extensionConfig);
         }
 
         generator.fs.copy(generator.templatePath('vscode'), generator.destinationPath('.vscode'));
@@ -59,8 +74,8 @@ module.exports = {
     }
 }
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 function askForLanguageInfo(generator, extensionConfig) {
     extensionConfig.isCustomization = true;
@@ -76,8 +91,8 @@ function askForLanguageInfo(generator, extensionConfig) {
 }
 
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 function askForLanguageId(generator, extensionConfig) {
     generator.log('Enter the id of the language. The id is an identifier and is single, lower-case name such as \'php\', \'javascript\'');
@@ -92,8 +107,8 @@ function askForLanguageId(generator, extensionConfig) {
 }
 
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 function askForLanguageName(generator, extensionConfig) {
     generator.log('Enter the name of the language. The name will be shown in the VS Code editor mode selector.');
@@ -108,8 +123,8 @@ function askForLanguageName(generator, extensionConfig) {
 }
 
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 function askForLanguageExtensions(generator, extensionConfig) {
     generator.log('Enter the file extensions of the language. Use commas to separate multiple entries (e.g. .ruby, .rb)');
@@ -124,8 +139,8 @@ function askForLanguageExtensions(generator, extensionConfig) {
 }
 
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 function askForLanguageScopeName(generator, extensionConfig) {
     generator.log('Enter the root scope name of the grammar (e.g. source.ruby)');
@@ -139,6 +154,10 @@ function askForLanguageScopeName(generator, extensionConfig) {
     });
 }
 
+/**
+ * @param {string} location
+ * @param {ExtensionConfig} extensionConfig
+ */
 function convertGrammar(location, extensionConfig) {
     extensionConfig.languageId = '';
     extensionConfig.languageName = '';
@@ -154,10 +173,13 @@ function convertGrammar(location, extensionConfig) {
         // load from url
         return request.xhr({ url: location }).then(r => {
             if (r.status == 200) {
-                var contentDisposition = r.headers && r.headers['content-disposition'];
-                var fileName = '';
+                let contentDisposition = r.headers && r.headers['content-disposition'];
+                if (Array.isArray(contentDisposition)) {
+                    contentDisposition = contentDisposition[0];
+                }
+                let fileName = '';
                 if (contentDisposition) {
-                    var fileNameMatch = contentDisposition.match(/filename="([^"]*)/);
+                    const fileNameMatch = contentDisposition.match(/filename="([^"]*)/);
                     if (fileNameMatch) {
                         fileName = fileNameMatch[1];
                     }
@@ -170,7 +192,7 @@ function convertGrammar(location, extensionConfig) {
 
     } else {
         // load from disk
-        var body = null;
+        let body = null;
         // trim the spaces of the location path
         location = location.trim()
         try {
@@ -186,8 +208,13 @@ function convertGrammar(location, extensionConfig) {
     }
 }
 
+/**
+ * @param {ExtensionConfig} extensionConfig
+ * @param {string} fileName
+ * @param {string} body
+ */
 function processContent(extensionConfig, fileName, body) {
-    var languageInfo;
+    let languageInfo;
     if (path.extname(fileName) === '.json') {
         try {
             languageInfo = JSON.parse(body);
@@ -212,19 +239,19 @@ function processContent(extensionConfig, fileName, body) {
     extensionConfig.languageName = languageInfo.name || '';
 
     // evaluate language id
-    var languageId = '';
-    var languageScopeName;
+    let languageId = '';
+    let languageScopeName;
 
     if (languageInfo.scopeName) {
         languageScopeName = languageInfo.scopeName;
 
-        var lastIndexOfDot = languageInfo.scopeName.lastIndexOf('.');
+        const lastIndexOfDot = languageInfo.scopeName.lastIndexOf('.');
         if (lastIndexOfDot) {
             languageId = languageInfo.scopeName.substring(lastIndexOfDot + 1);
         }
     }
     if (!languageId && fileName) {
-        var lastIndexOfDot2 = fileName.lastIndexOf('.');
+        const lastIndexOfDot2 = fileName.lastIndexOf('.');
         if (lastIndexOfDot2 && fileName.substring(lastIndexOfDot2 + 1) == 'tmLanguage') {
             languageId = fileName.substring(0, lastIndexOfDot2);
         }
@@ -248,5 +275,5 @@ function processContent(extensionConfig, fileName, body) {
         extensionConfig.languageExtensions = languageId ? ['.' + languageId] : [];
     }
     extensionConfig.languageContent = body;
-    return Promise.resolve(extensionConfig);
+    return Promise.resolve();
 };

@@ -1,16 +1,23 @@
 /*---------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
+import Generator from 'yeoman-generator';
+import * as prompts from './prompts.js';
 
-const prompts = require("./prompts");
+/**
+ * @typedef {import('./index.js').ExtensionConfig} ExtensionConfig
+*/
 
-module.exports = {
+/**
+ * @type {import('./index.js').ExtensionGenerator}
+ */
+export default {
     id: 'ext-notebook-renderer',
     aliases: ['notebook'],
     name: 'New Notebook Renderer (TypeScript)',
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     prompting: async (generator, extensionConfig) => {
         await prompts.askForExtensionDisplayName(generator, extensionConfig);
@@ -24,8 +31,8 @@ module.exports = {
 
     },
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     writing: (generator, extensionConfig) => {
 
@@ -34,7 +41,8 @@ module.exports = {
         generator.fs.copy(generator.templatePath('tsconfig.json'), generator.destinationPath('tsconfig.json'));
         generator.fs.copy(generator.templatePath('.vscodeignore'), generator.destinationPath('.vscodeignore'));
         generator.fs.copy(generator.templatePath('webpack.config.js'), generator.destinationPath('webpack.config.js'));
-        generator.fs.copy(generator.templatePath('.eslintrc.json'), generator.destinationPath('.eslintrc.json'));
+        generator.fs.copy(generator.templatePath('eslint.config.mjs'), generator.destinationPath('eslint.config.mjs'));
+        generator.fs.copy(generator.templatePath('.vscode-test.mjs'), generator.destinationPath('.vscode-test.mjs'));
 
         generator.fs.copyTpl(generator.templatePath('package.json'), generator.destinationPath('package.json'), extensionConfig);
         generator.fs.copyTpl(generator.templatePath('README.md'), generator.destinationPath('README.md'), extensionConfig);
@@ -51,6 +59,8 @@ module.exports = {
 
         if (extensionConfig.pkgManager === 'yarn') {
             generator.fs.copyTpl(generator.templatePath('.yarnrc'), generator.destinationPath('.yarnrc'), extensionConfig);
+        } else if (extensionConfig.pkgManager === 'pnpm') {
+            generator.fs.copyTpl(generator.templatePath('.npmrc-pnpm'), generator.destinationPath('.npmrc'), extensionConfig);
         }
 
         extensionConfig.installDependencies = true;
@@ -58,8 +68,8 @@ module.exports = {
 }
 
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 async function askForNotebookRendererInfo(generator, extensionConfig) {
     const answers = await generator.prompt([

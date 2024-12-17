@@ -9,9 +9,7 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    <%- JSON.stringify(`onCommand:${name}.helloWorld`) %>
-  ],
+  "activationEvents": [],
   "main": "./out/extension.js",<% if (insiders) { %>
   "enabledApiProposals": [],<% } %>
   "contributes": {
@@ -27,21 +25,19 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "<%= pkgManager %> run compile && <%= pkgManager %> run lint",
-    "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"<% if (insiders) { %>,
+    "lint": "eslint src",
+    "test": "vscode-test"<% if (insiders) { %>,
     "update-proposed-api": "vscode-dts dev"<% } %>
   },
   "devDependencies": {
     <%- dep("@types/vscode") %>,
-    <%- dep("@types/glob") %>,
     <%- dep("@types/mocha") %>,
     <%- dep("@types/node") %>,
     <%- dep("@typescript-eslint/eslint-plugin") %>,
     <%- dep("@typescript-eslint/parser") %>,
     <%- dep("eslint") %>,
-    <%- dep("glob") %>,
-    <%- dep("mocha") %>,
     <%- dep("typescript") %>,
+    <%- dep("@vscode/test-cli") %>,
     <%- dep("@vscode/test-electron") %><% if (insiders) { %>,
     <%- dep("vscode-dts") %><% } %>
   }

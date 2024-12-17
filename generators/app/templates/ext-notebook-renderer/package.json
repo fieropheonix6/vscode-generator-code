@@ -28,13 +28,12 @@
   "scripts": {
     "vscode:prepublish": "<%= pkgManager %> run compile",
     "compile": "webpack --mode production",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src",
     "watch": "webpack --mode development --watch",
     "pretest": "webpack --mode development && <%= pkgManager %> run lint",
-    "test": "node ./out/test/runTest.js"
+    "test": "vscode-test"
   },
   "devDependencies": {
-    <%- dep("@types/glob") %>,
     <%- dep("@types/mocha") %>,
     <%- dep("@types/node") %>,
     <%- dep("@types/webpack-env") %>,
@@ -51,6 +50,7 @@
     <%- dep("ts-loader") %>,
     <%- dep("typescript") %>,
     <%- dep("vscode-notebook-error-overlay") %>,
+    <%- dep("@vscode/test-cli") %>,
     <%- dep("@vscode/test-electron") %>,
     <%- dep("util") %>,
     <%- dep("webpack") %>,

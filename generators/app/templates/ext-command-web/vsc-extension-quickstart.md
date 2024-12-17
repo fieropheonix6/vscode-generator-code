@@ -9,11 +9,11 @@
 
 ## Setup
 
-* install the recommended extensions (amodio.tsl-problem-matcher and dbaeumer.vscode-eslint)
+* install the recommended extensions (amodio.tsl-problem-matcher, ms-vscode.extension-test-runner, and dbaeumer.vscode-eslint)
 
 ## Get up and running the Web Extension
 
-* Run `npm install`.
+* Run `<%= pkgManager %> install`.
 * Place breakpoints in `src/web/extension.ts`.
 * Debug via F5 (Run Web Extension).
 * Execute extension code via `F1 > Hello world`.

@@ -1,17 +1,28 @@
 /*---------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
+import Generator from 'yeoman-generator';
+import * as prompts from './prompts.js';
+import * as childProcess from 'child_process';
 
-const prompts = require("./prompts");
-let childProcess = require('child_process');
 
-module.exports = {
+/**
+ * @typedef {{
+*   extensionList: string[],
+*   isCustomization: boolean
+* } & import('./index.js').ExtensionConfig} ExtensionConfig
+*/
+
+/**
+ * @type {import('./index.js').ExtensionGenerator}
+ */
+export default {
     id: 'ext-extensionpack',
     aliases: ['extensionpack'],
     name: 'New Extension Pack',
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     prompting: async (generator, extensionConfig) => {
 
@@ -24,8 +35,8 @@ module.exports = {
         await prompts.askForGit(generator, extensionConfig);
     },
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     writing: (generator, extensionConfig) => {
         generator.fs.copy(generator.templatePath('vscode'), generator.destinationPath('.vscode'));
@@ -40,7 +51,10 @@ module.exports = {
         }
     }
 }
-
+/**
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
+ */
 function askForExtensionPackInfo(generator, extensionConfig) {
     extensionConfig.isCustomization = true;
     const defaultExtensionList = ['publisher.extensionName'];
@@ -51,7 +65,7 @@ function askForExtensionPackInfo(generator, extensionConfig) {
                 'code --list-extensions',
                 (error, stdout, stderr) => {
                     if (error) {
-                        generator.env.error(error);
+                        generator.log.error(error);
                     } else {
                         let out = stdout.trim();
                         if (out.length > 0) {

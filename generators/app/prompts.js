@@ -3,14 +3,20 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-const validator = require('./validator');
-const path = require('path');
+import Generator from 'yeoman-generator';
+
+import * as validator from './validator.js';
+import * as path from 'path';
 
 /**
-* @param {import('yeoman-generator')} generator
-* @param {Object} extensionConfig
+ * @typedef {import('./index.js').ExtensionConfig} ExtensionConfig
 */
-exports.askForExtensionDisplayName = (generator, extensionConfig) => {
+
+/**
+* @param {Generator} generator
+* @param {ExtensionConfig} extensionConfig
+*/
+export function askForExtensionDisplayName(generator, extensionConfig) {
     let extensionDisplayName = generator.options['extensionDisplayName'];
     if (extensionDisplayName) {
         extensionConfig.displayName = extensionDisplayName;
@@ -35,11 +41,11 @@ exports.askForExtensionDisplayName = (generator, extensionConfig) => {
 
 /**
  * Ask for extension id ("name" in package.json)
-* @param {import('yeoman-generator')} generator
-* @param {Object} extensionConfig
+* @param {Generator} generator
+* @param {ExtensionConfig} extensionConfig
 */
-exports.askForExtensionId = (generator, extensionConfig) => {
-    let extensionName = generator.options['extensionId'];
+export function askForExtensionId(generator, extensionConfig) {
+    const extensionName = generator.options['extensionId'];
     if (extensionName) {
         extensionConfig.name = extensionName;
         return Promise.resolve();
@@ -66,11 +72,11 @@ exports.askForExtensionId = (generator, extensionConfig) => {
 
 /**
  * Ask for extension description
-* @param {import('yeoman-generator')} generator
-* @param {Object} extensionConfig
+* @param {Generator} generator
+* @param {ExtensionConfig} extensionConfig
 */
-exports.askForExtensionDescription = (generator, extensionConfig) => {
-    let extensionDescription = generator.options['extensionDescription'];
+export function askForExtensionDescription(generator, extensionConfig) {
+    const extensionDescription = generator.options['extensionDescription'];
     if (extensionDescription) {
         extensionConfig.description = extensionDescription;
         return Promise.resolve();
@@ -91,11 +97,11 @@ exports.askForExtensionDescription = (generator, extensionConfig) => {
 }
 
 /**
-* @param {import('yeoman-generator')} generator
-* @param {Object} extensionConfig
+* @param {Generator} generator
+* @param {ExtensionConfig} extensionConfig
 */
-exports.askForGit = (generator, extensionConfig) => {
-    let gitInit = generator.options['gitInit'];
+export function askForGit(generator, extensionConfig) {
+    const gitInit = generator.options['gitInit'];
     if (typeof gitInit === 'boolean') {
         extensionConfig.gitInit = Boolean(gitInit);
         return Promise.resolve();
@@ -116,11 +122,11 @@ exports.askForGit = (generator, extensionConfig) => {
 }
 
 /**
-* @param {import('yeoman-generator')} generator
-* @param {Object} extensionConfig
+* @param {Generator} generator
+* @param {ExtensionConfig} extensionConfig
 */
-exports.askForPackageManager = (generator, extensionConfig) => {
-    let pkgManager = generator.options['pkgManager'];
+export function askForPackageManager(generator, extensionConfig) {
+    const pkgManager = generator.options['pkgManager'];
     if (pkgManager === 'npm' || pkgManager === 'yarn' || pkgManager === 'pnpm') {
         extensionConfig.pkgManager = pkgManager;
         return Promise.resolve();
@@ -156,27 +162,45 @@ exports.askForPackageManager = (generator, extensionConfig) => {
 }
 
 /**
-* @param {import('yeoman-generator')} generator
-* @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
+ * @param {'webpack' | 'esbuild' | 'unbundled'} defaultBundler
 */
-exports.askForWebpack = (generator, extensionConfig) => {
-    let webpack = generator.options['webpack'];
-    if (typeof webpack === 'boolean') {
-        extensionConfig.webpack = Boolean(webpack);
+export function askForBundler(generator, extensionConfig, allowNone = true, defaultBundler = 'unbundled') {
+    const bundler = generator.options['bundler'];
+    if (bundler === 'webpack' || bundler === 'esbuild') {
+        extensionConfig.bundler = bundler;
+        return Promise.resolve();
+    }
+    const webpack = generator.options['webpack']; // backwards compatibility
+    if (typeof webpack === 'boolean' && webpack) {
+        extensionConfig.bundler = 'webpack';
+        return Promise.resolve();
+    }
+    if (generator.options['quick']) {
+        extensionConfig.bundler = defaultBundler;
         return Promise.resolve();
     }
 
-    if (generator.options['quick']) {
-        extensionConfig.webpack = false;
-        return Promise.resolve();
-    }
+    const choices = allowNone ? [{ name: 'unbundled', value: 'unbundled' }] : [];
 
     return generator.prompt({
-        type: 'confirm',
-        name: 'webpack',
-        message: 'Bundle the source code with webpack?',
-        default: false
-    }).then(gitAnswer => {
-        extensionConfig.webpack = gitAnswer.webpack;
+        type: 'list',
+        default: defaultBundler,
+        name: 'bundler',
+        message: 'Which bundler to use?',
+        choices: [
+            ...choices,
+            {
+                name: 'webpack',
+                value: 'webpack'
+            },
+            {
+                name: 'esbuild',
+                value: 'esbuild'
+            }
+        ]
+    }).then(bundlerAnswer => {
+        extensionConfig.bundler = bundlerAnswer.bundler;
     });
 }

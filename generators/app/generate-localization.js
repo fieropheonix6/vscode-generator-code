@@ -1,17 +1,31 @@
 /*---------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
+import Generator from 'yeoman-generator';
+import * as prompts from './prompts.js';
+import { Chalk } from 'chalk';
 
-const prompts = require("./prompts");
-const chalk = require("chalk");
+/**
+ * @typedef {{
+ *      lpLanguageId: string,
+ *      lpLanguageName: string,
+ *      lpLocalizedLanguageName: string,
+ *      isCustomization: boolean
+ * } & import('./index.js').ExtensionConfig} ExtensionConfig
+ */
 
-module.exports = {
+const chalk = new Chalk();
+
+/**
+ * @type {import('./index.js').ExtensionGenerator}
+ */
+export default {
     id: 'ext-localization',
     aliases: ['localization'],
     name: 'New Language Pack (Localization)',
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     prompting: async (generator, extensionConfig) => {
 
@@ -26,8 +40,8 @@ module.exports = {
         await prompts.askForPackageManager(generator, extensionConfig);
     },
     /**
-     * @param {import('yeoman-generator')} generator
-     * @param {Object} extensionConfig
+     * @param {Generator} generator
+     * @param {ExtensionConfig} extensionConfig
      */
     writing: (generator, extensionConfig) => {
         generator.fs.copyTpl(generator.templatePath('package.json'), generator.destinationPath('package.json'), extensionConfig);
@@ -40,6 +54,8 @@ module.exports = {
 
         if (extensionConfig.pkgManager === 'yarn') {
             generator.fs.copyTpl(generator.templatePath('.yarnrc'), generator.destinationPath('.yarnrc'), extensionConfig);
+        } else if (extensionConfig.pkgManager === 'pnpm') {
+            generator.fs.copyTpl(generator.templatePath('.npmrc-pnpm'), generator.destinationPath('.npmrc'), extensionConfig);
         }
 
         extensionConfig.installDependencies = true;
@@ -52,8 +68,8 @@ module.exports = {
 }
 
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 function askForLanguageId(generator, extensionConfig) {
     extensionConfig.isCustomization = true;
@@ -72,8 +88,8 @@ function askForLanguageId(generator, extensionConfig) {
 }
 
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 function askForLanguageName(generator, extensionConfig) {
     extensionConfig.isCustomization = true;
@@ -95,8 +111,8 @@ function askForLanguageName(generator, extensionConfig) {
 }
 
 /**
- * @param {import('yeoman-generator')} generator
- * @param {Object} extensionConfig
+ * @param {Generator} generator
+ * @param {ExtensionConfig} extensionConfig
  */
 function askForLocalizedLanguageName(generator, extensionConfig) {
     extensionConfig.isCustomization = true;
